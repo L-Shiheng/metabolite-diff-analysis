@@ -232,39 +232,51 @@ if uploaded_file is not None:
     gone_count = len(gone)
     kept_count = len(kept)
     
-    report = f"""
-代谢物特征消失原因分析报告
-{'='*50}
-
-分析时间: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}
-
-数据概览:
-- 总特征数: {total_features}
-- 消失特征数: {gone_count} ({gone_count/total_features*100:.1f}%)
-- 保留特征数: {kept_count} ({kept_count/total_features*100:.1f}%)
-
-m/z 分布:
-- 消失特征: 平均值 {gone['mz_non'].mean():.2f if gone_count > 0 else 0}, 范围 {gone['mz_non'].min():.4f if gone_count > 0 else 0} - {gone['mz_non'].max():.4f if gone_count > 0 else 0}
-- 保留特征: 平均值 {kept['mz_non'].mean():.2f if kept_count > 0 else 0}, 范围 {kept['mz_non'].min():.4f if kept_count > 0 else 0} - {kept['mz_non'].max():.4f if kept_count > 0 else 0}
-
-保留时间分布:
-- 消失特征: 平均值 {gone['rt_non'].mean():.2f if gone_count > 0 else 0}, 范围 {gone['rt_non'].min():.2f if gone_count > 0 else 0} - {gone['rt_non'].max():.2f if gone_count > 0 else 0}
-- 保留特征: 平均值 {kept['rt_non'].mean():.2f if kept_count > 0 else 0}, 范围 {kept['rt_non'].min():.2f if kept_count > 0 else 0} - {kept['rt_non'].max():.2f if kept_count > 0 else 0}
-
-含 ExMrn 编号比例:
-- 消失特征: {gone_has_exmrn}/{gone_count} ({gone_has_exmrn/gone_count*100:.1f}%) if gone_count > 0 else 0%
-- 保留特征: {kept_has_exmrn}/{kept_count} ({kept_has_exmrn/kept_count*100:.1f}%) if kept_count > 0 else 0%
-
-候选名数量 (平均值):
-- 消失特征: {gone_name_count.mean():.1f if gone_count > 0 else 0}
-- 保留特征: {kept_name_count.mean():.1f if kept_count > 0 else 0}
-
-原因推断:
-{chr(10).join(reasons)}
-
-消失特征列表:
-{gone[['mz_non', 'rt_non', 'non_names']].to_string(index=False) if gone_count > 0 else '无'}
-"""
+    report_lines = [
+        "代谢物特征消失原因分析报告",
+        "=" * 50,
+        "",
+        f"分析时间: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        "",
+        "数据概览:",
+        f"- 总特征数: {total_features}",
+        f"- 消失特征数: {gone_count} ({gone_count/total_features*100:.1f}%)",
+        f"- 保留特征数: {kept_count} ({kept_count/total_features*100:.1f}%)",
+        "",
+        "m/z 分布:",
+        f"- 消失特征: 平均值 {gone['mz_non'].mean():.2f if gone_count > 0 else 0}, 范围 {gone['mz_non'].min():.4f if gone_count > 0 else 0} - {gone['mz_non'].max():.4f if gone_count > 0 else 0}",
+        f"- 保留特征: 平均值 {kept['mz_non'].mean():.2f if kept_count > 0 else 0}, 范围 {kept['mz_non'].min():.4f if kept_count > 0 else 0} - {kept['mz_non'].max():.4f if kept_count > 0 else 0}",
+        "",
+        "保留时间分布:",
+        f"- 消失特征: 平均值 {gone['rt_non'].mean():.2f if gone_count > 0 else 0}, 范围 {gone['rt_non'].min():.2f if gone_count > 0 else 0} - {gone['rt_non'].max():.2f if gone_count > 0 else 0}",
+        f"- 保留特征: 平均值 {kept['rt_non'].mean():.2f if kept_count > 0 else 0}, 范围 {kept['rt_non'].min():.2f if kept_count > 0 else 0} - {kept['rt_non'].max():.2f if kept_count > 0 else 0}",
+        "",
+        "含 ExMrn 编号比例:",
+        f"- 消失特征: {gone_has_exmrn}/{gone_count} ({gone_has_exmrn/gone_count*100:.1f}%)" if gone_count > 0 else "- 消失特征: 0",
+        f"- 保留特征: {kept_has_exmrn}/{kept_count} ({kept_has_exmrn/kept_count*100:.1f}%)" if kept_count > 0 else "- 保留特征: 0",
+        "",
+        "候选名数量 (平均值):",
+        f"- 消失特征: {gone_name_count.mean():.1f if gone_count > 0 else 0}",
+        f"- 保留特征: {kept_name_count.mean():.1f if kept_count > 0 else 0}",
+        "",
+        "原因推断:",
+    ]
+    
+    for reason in reasons:
+        report_lines.append(reason)
+    
+    report_lines.extend([
+        "",
+        "消失特征列表:",
+    ])
+    
+    if gone_count > 0:
+        for _, row in gone[['mz_non', 'rt_non', 'non_names']].iterrows():
+            report_lines.append(f"{row['mz_non']:.4f}, {row['rt_non']:.2f}, {row['non_names']}")
+    else:
+        report_lines.append("无")
+    
+    report = "\n".join(report_lines)
     
     st.download_button(
         label="📄 下载分析报告 (TXT)",
@@ -301,4 +313,8 @@ else:
         - `diff_type`: 差异类型 (包含 "整个特征消失")
         - `reason`: 原因说明
         
-        示例数据：
+        示例数据（CSV 格式）：
+        
+        mz_non,rt_non,mz_ds,rt_ds,non_names,ds_names,missing_names,diff_type,reason
+        169.0857,230.1,,,,(3,4-Dimethoxyphenyl)methanol;(4-Hydroxy-3-methoxyphenyl)ethanol,,整个特征消失,校正后该 mz-rt 特征未匹配到任何代谢物
+        """)

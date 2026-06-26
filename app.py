@@ -3,13 +3,48 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from io import BytesIO
+import matplotlib
+import platform
 
+# 设置中文字体
+def set_chinese_font():
+    """设置 matplotlib 中文字体"""
+    system = platform.system()
+    if system == 'Windows':
+        # Windows 系统
+        font_list = ['SimHei', 'Microsoft YaHei', 'KaiTi', 'FangSong']
+    elif system == 'Darwin':
+        # macOS 系统
+        font_list = ['PingFang SC', 'Heiti SC', 'STHeiti', 'Apple LiGothic']
+    else:
+        # Linux 系统 (Streamlit Cloud 环境)
+        font_list = ['WenQuanYi Zen Hei', 'Noto Sans CJK SC', 'SimHei', 'DejaVu Sans']
+    
+    # 尝试设置字体
+    for font in font_list:
+        try:
+            matplotlib.rcParams['font.sans-serif'] = [font]
+            matplotlib.rcParams['axes.unicode_minus'] = False
+            # 测试是否能显示中文
+            plt.text(0.5, 0.5, '测试', fontsize=10)
+            plt.close()
+            return True
+        except:
+            continue
+    
+    # 如果所有字体都失败，使用默认字体并显示警告
+    matplotlib.rcParams['font.sans-serif'] = ['DejaVu Sans']
+    matplotlib.rcParams['axes.unicode_minus'] = False
+    return False
+
+# 设置页面配置
 st.set_page_config(
     page_title="代谢物特征消失原因分析",
     page_icon="🔍",
     layout="wide"
 )
 
+# 标题
 st.title("🔍 代谢物特征消失原因分析")
 st.markdown("上传 `metabolite_diff` 报告，自动分析哪些特征在校正后消失，并推测可能原因")
 
@@ -141,58 +176,126 @@ if uploaded_file is not None:
         else:
             st.info("无数据")
     
-    # 可视化
+    # 可视化分析
     st.subheader("📊 可视化分析")
     
+    # 设置中文字体
+    font_ok = set_chinese_font()
+    if not font_ok:
+        st.warning("⚠️ 中文字体设置失败，图表中的中文可能显示为方框。这是 Streamlit Cloud 环境的限制，不影响数据分析功能。")
+    
     if len(gone) > 0 and len(kept) > 0:
-        fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-        
-        # 1. mz-rt 散点图
-        ax1 = axes[0, 0]
-        ax1.scatter(kept['rt_non'], kept['mz_non'], label='保留特征', alpha=0.6, color='green', s=50)
-        ax1.scatter(gone['rt_non'], gone['mz_non'], label='消失特征', alpha=0.8, color='red', s=50, marker='x')
-        ax1.set_xlabel('保留时间 (min)')
-        ax1.set_ylabel('m/z')
-        ax1.set_title('特征分布：保留 vs 消失')
-        ax1.legend()
-        ax1.grid(True, linestyle='--', alpha=0.5)
-        
-        # 2. mz 分布直方图
-        ax2 = axes[0, 1]
-        ax2.hist(gone['mz_non'], bins=min(10, len(gone)), alpha=0.5, label='消失特征', color='red')
-        ax2.hist(kept['mz_non'], bins=min(10, len(kept)), alpha=0.5, label='保留特征', color='green')
-        ax2.set_xlabel('m/z')
-        ax2.set_ylabel('频数')
-        ax2.set_title('m/z 分布对比')
-        ax2.legend()
-        
-        # 3. rt 分布直方图
-        ax3 = axes[1, 0]
-        ax3.hist(gone['rt_non'], bins=min(10, len(gone)), alpha=0.5, label='消失特征', color='red')
-        ax3.hist(kept['rt_non'], bins=min(10, len(kept)), alpha=0.5, label='保留特征', color='green')
-        ax3.set_xlabel('保留时间 (min)')
-        ax3.set_ylabel('频数')
-        ax3.set_title('保留时间分布对比')
-        ax3.legend()
-        
-        # 4. 候选名数量箱线图（修复 labels 参数问题）
-        ax4 = axes[1, 1]
-        # 准备数据
-        data_to_plot = [gone_name_count.tolist(), kept_name_count.tolist()]
-        bp = ax4.boxplot(data_to_plot, patch_artist=True)
-        
-        # 设置颜色
-        bp['boxes'][0].set_facecolor('red')
-        bp['boxes'][1].set_facecolor('green')
-        
-        # 设置 x 轴标签（使用 set_xticklabels 替代 labels 参数）
-        ax4.set_xticklabels(['消失特征', '保留特征'])
-        ax4.set_ylabel('候选名数量')
-        ax4.set_title('候选名数量对比')
-        ax4.grid(True, linestyle='--', alpha=0.5)
-        
-        plt.tight_layout()
-        st.pyplot(fig)
+        try:
+            fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+            
+            # 1. mz-rt 散点图
+            ax1 = axes[0, 0]
+            ax1.scatter(kept['rt_non'], kept['mz_non'], 
+                       label='Retained features', alpha=0.6, 
+                       color='green', s=50)
+            ax1.scatter(gone['rt_non'], gone['mz_non'], 
+                       label='Missing features', alpha=0.8, 
+                       color='red', s=50, marker='x')
+            ax1.set_xlabel('Retention Time (min)')
+            ax1.set_ylabel('m/z')
+            ax1.set_title('Feature Distribution: Retained vs Missing')
+            ax1.legend()
+            ax1.grid(True, linestyle='--', alpha=0.5)
+            
+            # 2. mz 分布直方图
+            ax2 = axes[0, 1]
+            ax2.hist(gone['mz_non'], bins=min(10, len(gone)), 
+                    alpha=0.5, label='Missing', color='red')
+            ax2.hist(kept['mz_non'], bins=min(10, len(kept)), 
+                    alpha=0.5, label='Retained', color='green')
+            ax2.set_xlabel('m/z')
+            ax2.set_ylabel('Frequency')
+            ax2.set_title('m/z Distribution Comparison')
+            ax2.legend()
+            
+            # 3. rt 分布直方图
+            ax3 = axes[1, 0]
+            ax3.hist(gone['rt_non'], bins=min(10, len(gone)), 
+                    alpha=0.5, label='Missing', color='red')
+            ax3.hist(kept['rt_non'], bins=min(10, len(kept)), 
+                    alpha=0.5, label='Retained', color='green')
+            ax3.set_xlabel('Retention Time (min)')
+            ax3.set_ylabel('Frequency')
+            ax3.set_title('Retention Time Distribution Comparison')
+            ax3.legend()
+            
+            # 4. 候选名数量箱线图
+            ax4 = axes[1, 1]
+            data_to_plot = [gone_name_count.tolist(), kept_name_count.tolist()]
+            bp = ax4.boxplot(data_to_plot, patch_artist=True)
+            
+            # 设置颜色
+            bp['boxes'][0].set_facecolor('red')
+            bp['boxes'][1].set_facecolor('green')
+            
+            # 设置 x 轴标签
+            ax4.set_xticklabels(['Missing', 'Retained'])
+            ax4.set_ylabel('Number of Candidates')
+            ax4.set_title('Candidate Count Comparison')
+            ax4.grid(True, linestyle='--', alpha=0.5)
+            
+            plt.tight_layout()
+            st.pyplot(fig)
+            
+        except Exception as e:
+            st.error(f"生成图表时出错: {str(e)}")
+            st.info("尝试使用英文标签重新生成图表...")
+            
+            # 备用方案：使用英文标签
+            try:
+                fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+                
+                ax1 = axes[0, 0]
+                ax1.scatter(kept['rt_non'], kept['mz_non'], 
+                           label='Retained', alpha=0.6, color='green', s=50)
+                ax1.scatter(gone['rt_non'], gone['mz_non'], 
+                           label='Missing', alpha=0.8, color='red', s=50, marker='x')
+                ax1.set_xlabel('RT (min)')
+                ax1.set_ylabel('m/z')
+                ax1.set_title('Feature Distribution')
+                ax1.legend()
+                ax1.grid(True, linestyle='--', alpha=0.5)
+                
+                ax2 = axes[0, 1]
+                ax2.hist(gone['mz_non'], bins=min(10, len(gone)), 
+                        alpha=0.5, label='Missing', color='red')
+                ax2.hist(kept['mz_non'], bins=min(10, len(kept)), 
+                        alpha=0.5, label='Retained', color='green')
+                ax2.set_xlabel('m/z')
+                ax2.set_ylabel('Frequency')
+                ax2.set_title('m/z Distribution')
+                ax2.legend()
+                
+                ax3 = axes[1, 0]
+                ax3.hist(gone['rt_non'], bins=min(10, len(gone)), 
+                        alpha=0.5, label='Missing', color='red')
+                ax3.hist(kept['rt_non'], bins=min(10, len(kept)), 
+                        alpha=0.5, label='Retained', color='green')
+                ax3.set_xlabel('RT (min)')
+                ax3.set_ylabel('Frequency')
+                ax3.set_title('RT Distribution')
+                ax3.legend()
+                
+                ax4 = axes[1, 1]
+                data_to_plot = [gone_name_count.tolist(), kept_name_count.tolist()]
+                bp = ax4.boxplot(data_to_plot, patch_artist=True)
+                bp['boxes'][0].set_facecolor('red')
+                bp['boxes'][1].set_facecolor('green')
+                ax4.set_xticklabels(['Missing', 'Retained'])
+                ax4.set_ylabel('Candidate Count')
+                ax4.set_title('Candidate Count')
+                ax4.grid(True, linestyle='--', alpha=0.5)
+                
+                plt.tight_layout()
+                st.pyplot(fig)
+                
+            except Exception as e2:
+                st.error(f"备用方案也失败了: {str(e2)}")
     else:
         st.warning("数据不足，无法生成可视化图表（需要至少一个消失特征和一个保留特征）")
     
@@ -250,75 +353,80 @@ if uploaded_file is not None:
     kept_count = len(kept)
     
     report_lines = [
-        "代谢物特征消失原因分析报告",
+        "Metabolite Feature Missing Analysis Report",
         "=" * 50,
         "",
-        f"分析时间: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        f"Analysis Time: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}",
         "",
-        "数据概览:",
-        f"- 总特征数: {total_features}",
-        f"- 消失特征数: {gone_count} ({gone_count/total_features*100:.1f}%)" if total_features > 0 else "- 消失特征数: 0",
-        f"- 保留特征数: {kept_count} ({kept_count/total_features*100:.1f}%)" if total_features > 0 else "- 保留特征数: 0",
+        "Data Overview:",
+        f"- Total features: {total_features}",
+        f"- Missing features: {gone_count} ({gone_count/total_features*100:.1f}%)" if total_features > 0 else "- Missing features: 0",
+        f"- Retained features: {kept_count} ({kept_count/total_features*100:.1f}%)" if total_features > 0 else "- Retained features: 0",
         "",
     ]
     
     if gone_count > 0 and kept_count > 0:
         report_lines.extend([
-            "m/z 分布:",
-            f"- 消失特征: 平均值 {gone['mz_non'].mean():.2f}, 范围 {gone['mz_non'].min():.4f} - {gone['mz_non'].max():.4f}",
-            f"- 保留特征: 平均值 {kept['mz_non'].mean():.2f}, 范围 {kept['mz_non'].min():.4f} - {kept['mz_non'].max():.4f}",
+            "m/z Distribution:",
+            f"- Missing: Mean {gone['mz_non'].mean():.2f}, Range {gone['mz_non'].min():.4f} - {gone['mz_non'].max():.4f}",
+            f"- Retained: Mean {kept['mz_non'].mean():.2f}, Range {kept['mz_non'].min():.4f} - {kept['mz_non'].max():.4f}",
             "",
-            "保留时间分布:",
-            f"- 消失特征: 平均值 {gone['rt_non'].mean():.2f}, 范围 {gone['rt_non'].min():.2f} - {gone['rt_non'].max():.2f}",
-            f"- 保留特征: 平均值 {kept['rt_non'].mean():.2f}, 范围 {kept['rt_non'].min():.2f} - {kept['rt_non'].max():.2f}",
+            "Retention Time Distribution:",
+            f"- Missing: Mean {gone['rt_non'].mean():.2f}, Range {gone['rt_non'].min():.2f} - {gone['rt_non'].max():.2f}",
+            f"- Retained: Mean {kept['rt_non'].mean():.2f}, Range {kept['rt_non'].min():.2f} - {kept['rt_non'].max():.2f}",
             "",
-            "含 ExMrn 编号比例:",
-            f"- 消失特征: {gone_has_exmrn}/{gone_count} ({gone_has_exmrn/gone_count*100:.1f}%)",
-            f"- 保留特征: {kept_has_exmrn}/{kept_count} ({kept_has_exmrn/kept_count*100:.1f}%)",
+            "ExMrn Ratio:",
+            f"- Missing: {gone_has_exmrn}/{gone_count} ({gone_has_exmrn/gone_count*100:.1f}%)",
+            f"- Retained: {kept_has_exmrn}/{kept_count} ({kept_has_exmrn/kept_count*100:.1f}%)",
             "",
-            "候选名数量 (平均值):",
-            f"- 消失特征: {gone_name_count.mean():.1f}",
-            f"- 保留特征: {kept_name_count.mean():.1f}",
+            "Candidate Count (Mean):",
+            f"- Missing: {gone_name_count.mean():.1f}",
+            f"- Retained: {kept_name_count.mean():.1f}",
             "",
         ])
     
     report_lines.extend([
-        "原因推断:",
+        "Reasons:",
     ])
     
     for reason in reasons:
-        report_lines.append(reason)
+        # 去除 emoji 以便纯文本显示
+        clean_reason = reason.replace('⚠️ ', '').replace('✅ ', '').replace('💡 ', '')
+        report_lines.append(clean_reason)
     
     report_lines.extend([
         "",
-        "消失特征列表:",
+        "Missing Features List:",
     ])
     
     if gone_count > 0:
         for _, row in gone[['mz_non', 'rt_non', 'non_names']].iterrows():
             report_lines.append(f"{row['mz_non']:.4f}, {row['rt_non']:.2f}, {row['non_names']}")
     else:
-        report_lines.append("无")
+        report_lines.append("None")
     
     report = "\n".join(report_lines)
     
     st.download_button(
         label="📄 下载分析报告 (TXT)",
         data=report.encode('utf-8'),
-        file_name=f"消失原因分析报告_{pd.Timestamp.now().strftime('%Y%m%d')}.txt",
+        file_name=f"missing_analysis_report_{pd.Timestamp.now().strftime('%Y%m%d')}.txt",
         mime="text/plain"
     )
     
     # 下载图表
-    if len(gone) > 0 and len(kept) > 0:
-        buf = BytesIO()
-        fig.savefig(buf, format='png', dpi=300, bbox_inches='tight')
-        st.download_button(
-            label="📊 下载可视化图表 (PNG)",
-            data=buf.getvalue(),
-            file_name=f"特征分析图_{pd.Timestamp.now().strftime('%Y%m%d')}.png",
-            mime="image/png"
-        )
+    if len(gone) > 0 and len(kept) > 0 and 'fig' in locals():
+        try:
+            buf = BytesIO()
+            fig.savefig(buf, format='png', dpi=300, bbox_inches='tight')
+            st.download_button(
+                label="📊 下载可视化图表 (PNG)",
+                data=buf.getvalue(),
+                file_name=f"feature_analysis_{pd.Timestamp.now().strftime('%Y%m%d')}.png",
+                mime="image/png"
+            )
+        except:
+            st.warning("无法下载图表")
 
 else:
     st.info("👈 请上传差异报告 CSV 文件开始分析")

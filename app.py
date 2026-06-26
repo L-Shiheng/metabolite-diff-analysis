@@ -49,85 +49,97 @@ if uploaded_file is not None:
     
     with col1:
         st.markdown("**m/z 分布对比**")
-        mz_stats = pd.DataFrame({
-            '统计量': ['最小值', '最大值', '平均值', '中位数'],
-            '消失特征': [
-                f"{gone['mz_non'].min():.4f}",
-                f"{gone['mz_non'].max():.4f}",
-                f"{gone['mz_non'].mean():.2f}",
-                f"{gone['mz_non'].median():.2f}"
-            ],
-            '保留特征': [
-                f"{kept['mz_non'].min():.4f}",
-                f"{kept['mz_non'].max():.4f}",
-                f"{kept['mz_non'].mean():.2f}",
-                f"{kept['mz_non'].median():.2f}"
-            ]
-        })
-        st.table(mz_stats)
+        if len(gone) > 0 and len(kept) > 0:
+            mz_stats = pd.DataFrame({
+                '统计量': ['最小值', '最大值', '平均值', '中位数'],
+                '消失特征': [
+                    f"{gone['mz_non'].min():.4f}",
+                    f"{gone['mz_non'].max():.4f}",
+                    f"{gone['mz_non'].mean():.2f}",
+                    f"{gone['mz_non'].median():.2f}"
+                ],
+                '保留特征': [
+                    f"{kept['mz_non'].min():.4f}",
+                    f"{kept['mz_non'].max():.4f}",
+                    f"{kept['mz_non'].mean():.2f}",
+                    f"{kept['mz_non'].median():.2f}"
+                ]
+            })
+            st.table(mz_stats)
+        else:
+            st.info("数据不足")
         
     with col2:
         st.markdown("**保留时间分布对比**")
-        rt_stats = pd.DataFrame({
-            '统计量': ['最小值', '最大值', '平均值', '中位数'],
-            '消失特征': [
-                f"{gone['rt_non'].min():.2f}",
-                f"{gone['rt_non'].max():.2f}",
-                f"{gone['rt_non'].mean():.2f}",
-                f"{gone['rt_non'].median():.2f}"
-            ],
-            '保留特征': [
-                f"{kept['rt_non'].min():.2f}",
-                f"{kept['rt_non'].max():.2f}",
-                f"{kept['rt_non'].mean():.2f}",
-                f"{kept['rt_non'].median():.2f}"
-            ]
-        })
-        st.table(rt_stats)
+        if len(gone) > 0 and len(kept) > 0:
+            rt_stats = pd.DataFrame({
+                '统计量': ['最小值', '最大值', '平均值', '中位数'],
+                '消失特征': [
+                    f"{gone['rt_non'].min():.2f}",
+                    f"{gone['rt_non'].max():.2f}",
+                    f"{gone['rt_non'].mean():.2f}",
+                    f"{gone['rt_non'].median():.2f}"
+                ],
+                '保留特征': [
+                    f"{kept['rt_non'].min():.2f}",
+                    f"{kept['rt_non'].max():.2f}",
+                    f"{kept['rt_non'].mean():.2f}",
+                    f"{kept['rt_non'].median():.2f}"
+                ]
+            })
+            st.table(rt_stats)
+        else:
+            st.info("数据不足")
     
     # 化合物特征分析
     st.subheader("🧬 化合物特征分析")
     
     # 检查是否包含 ExMrn
-    gone_has_exmrn = gone['non_names'].str.contains('ExMrn', na=False).sum()
-    kept_has_exmrn = kept['non_names'].str.contains('ExMrn', na=False).sum()
+    gone_has_exmrn = gone['non_names'].str.contains('ExMrn', na=False).sum() if len(gone) > 0 else 0
+    kept_has_exmrn = kept['non_names'].str.contains('ExMrn', na=False).sum() if len(kept) > 0 else 0
     
     col1, col2 = st.columns(2)
     
     with col1:
         st.markdown("**含 ExMrn 编号的比例**")
-        exmrn_data = pd.DataFrame({
-            '类型': ['消失特征', '保留特征'],
-            '含 ExMrn 数量': [gone_has_exmrn, kept_has_exmrn],
-            '总数': [len(gone), len(kept)],
-            '比例': [
-                f"{gone_has_exmrn/len(gone)*100:.1f}%" if len(gone) > 0 else "0%",
-                f"{kept_has_exmrn/len(kept)*100:.1f}%" if len(kept) > 0 else "0%"
-            ]
-        })
-        st.table(exmrn_data)
+        if len(gone) > 0 or len(kept) > 0:
+            exmrn_data = pd.DataFrame({
+                '类型': ['消失特征', '保留特征'],
+                '含 ExMrn 数量': [gone_has_exmrn, kept_has_exmrn],
+                '总数': [len(gone), len(kept)],
+                '比例': [
+                    f"{gone_has_exmrn/len(gone)*100:.1f}%" if len(gone) > 0 else "0%",
+                    f"{kept_has_exmrn/len(kept)*100:.1f}%" if len(kept) > 0 else "0%"
+                ]
+            })
+            st.table(exmrn_data)
+        else:
+            st.info("无数据")
     
     with col2:
         st.markdown("**候选名数量对比**")
-        gone_name_count = gone['non_names'].str.split(';').apply(len) if len(gone) > 0 else pd.Series([0])
-        kept_name_count = kept['non_names'].str.split(';').apply(len) if len(kept) > 0 else pd.Series([0])
-        
-        name_count_data = pd.DataFrame({
-            '统计量': ['平均值', '中位数', '最小值', '最大值'],
-            '消失特征': [
-                f"{gone_name_count.mean():.1f}",
-                f"{gone_name_count.median():.0f}",
-                f"{gone_name_count.min():.0f}",
-                f"{gone_name_count.max():.0f}"
-            ],
-            '保留特征': [
-                f"{kept_name_count.mean():.1f}",
-                f"{kept_name_count.median():.0f}",
-                f"{kept_name_count.min():.0f}",
-                f"{kept_name_count.max():.0f}"
-            ]
-        })
-        st.table(name_count_data)
+        if len(gone) > 0 or len(kept) > 0:
+            gone_name_count = gone['non_names'].str.split(';').apply(len) if len(gone) > 0 else pd.Series([0])
+            kept_name_count = kept['non_names'].str.split(';').apply(len) if len(kept) > 0 else pd.Series([0])
+            
+            name_count_data = pd.DataFrame({
+                '统计量': ['平均值', '中位数', '最小值', '最大值'],
+                '消失特征': [
+                    f"{gone_name_count.mean():.1f}",
+                    f"{gone_name_count.median():.0f}",
+                    f"{gone_name_count.min():.0f}",
+                    f"{gone_name_count.max():.0f}"
+                ],
+                '保留特征': [
+                    f"{kept_name_count.mean():.1f}",
+                    f"{kept_name_count.median():.0f}",
+                    f"{kept_name_count.min():.0f}",
+                    f"{kept_name_count.max():.0f}"
+                ]
+            })
+            st.table(name_count_data)
+        else:
+            st.info("无数据")
     
     # 可视化
     st.subheader("📊 可视化分析")
@@ -147,8 +159,8 @@ if uploaded_file is not None:
         
         # 2. mz 分布直方图
         ax2 = axes[0, 1]
-        ax2.hist(gone['mz_non'], bins=10, alpha=0.5, label='消失特征', color='red')
-        ax2.hist(kept['mz_non'], bins=10, alpha=0.5, label='保留特征', color='green')
+        ax2.hist(gone['mz_non'], bins=min(10, len(gone)), alpha=0.5, label='消失特征', color='red')
+        ax2.hist(kept['mz_non'], bins=min(10, len(kept)), alpha=0.5, label='保留特征', color='green')
         ax2.set_xlabel('m/z')
         ax2.set_ylabel('频数')
         ax2.set_title('m/z 分布对比')
@@ -156,20 +168,25 @@ if uploaded_file is not None:
         
         # 3. rt 分布直方图
         ax3 = axes[1, 0]
-        ax3.hist(gone['rt_non'], bins=10, alpha=0.5, label='消失特征', color='red')
-        ax3.hist(kept['rt_non'], bins=10, alpha=0.5, label='保留特征', color='green')
+        ax3.hist(gone['rt_non'], bins=min(10, len(gone)), alpha=0.5, label='消失特征', color='red')
+        ax3.hist(kept['rt_non'], bins=min(10, len(kept)), alpha=0.5, label='保留特征', color='green')
         ax3.set_xlabel('保留时间 (min)')
         ax3.set_ylabel('频数')
         ax3.set_title('保留时间分布对比')
         ax3.legend()
         
-        # 4. 候选名数量箱线图
+        # 4. 候选名数量箱线图（修复 labels 参数问题）
         ax4 = axes[1, 1]
-        bp = ax4.boxplot([gone_name_count, kept_name_count], 
-                         labels=['消失特征', '保留特征'],
-                         patch_artist=True)
+        # 准备数据
+        data_to_plot = [gone_name_count.tolist(), kept_name_count.tolist()]
+        bp = ax4.boxplot(data_to_plot, patch_artist=True)
+        
+        # 设置颜色
         bp['boxes'][0].set_facecolor('red')
         bp['boxes'][1].set_facecolor('green')
+        
+        # 设置 x 轴标签（使用 set_xticklabels 替代 labels 参数）
+        ax4.set_xticklabels(['消失特征', '保留特征'])
         ax4.set_ylabel('候选名数量')
         ax4.set_title('候选名数量对比')
         ax4.grid(True, linestyle='--', alpha=0.5)
@@ -240,27 +257,34 @@ if uploaded_file is not None:
         "",
         "数据概览:",
         f"- 总特征数: {total_features}",
-        f"- 消失特征数: {gone_count} ({gone_count/total_features*100:.1f}%)",
-        f"- 保留特征数: {kept_count} ({kept_count/total_features*100:.1f}%)",
+        f"- 消失特征数: {gone_count} ({gone_count/total_features*100:.1f}%)" if total_features > 0 else "- 消失特征数: 0",
+        f"- 保留特征数: {kept_count} ({kept_count/total_features*100:.1f}%)" if total_features > 0 else "- 保留特征数: 0",
         "",
-        "m/z 分布:",
-        f"- 消失特征: 平均值 {gone['mz_non'].mean():.2f if gone_count > 0 else 0}, 范围 {gone['mz_non'].min():.4f if gone_count > 0 else 0} - {gone['mz_non'].max():.4f if gone_count > 0 else 0}",
-        f"- 保留特征: 平均值 {kept['mz_non'].mean():.2f if kept_count > 0 else 0}, 范围 {kept['mz_non'].min():.4f if kept_count > 0 else 0} - {kept['mz_non'].max():.4f if kept_count > 0 else 0}",
-        "",
-        "保留时间分布:",
-        f"- 消失特征: 平均值 {gone['rt_non'].mean():.2f if gone_count > 0 else 0}, 范围 {gone['rt_non'].min():.2f if gone_count > 0 else 0} - {gone['rt_non'].max():.2f if gone_count > 0 else 0}",
-        f"- 保留特征: 平均值 {kept['rt_non'].mean():.2f if kept_count > 0 else 0}, 范围 {kept['rt_non'].min():.2f if kept_count > 0 else 0} - {kept['rt_non'].max():.2f if kept_count > 0 else 0}",
-        "",
-        "含 ExMrn 编号比例:",
-        f"- 消失特征: {gone_has_exmrn}/{gone_count} ({gone_has_exmrn/gone_count*100:.1f}%)" if gone_count > 0 else "- 消失特征: 0",
-        f"- 保留特征: {kept_has_exmrn}/{kept_count} ({kept_has_exmrn/kept_count*100:.1f}%)" if kept_count > 0 else "- 保留特征: 0",
-        "",
-        "候选名数量 (平均值):",
-        f"- 消失特征: {gone_name_count.mean():.1f if gone_count > 0 else 0}",
-        f"- 保留特征: {kept_name_count.mean():.1f if kept_count > 0 else 0}",
-        "",
-        "原因推断:",
     ]
+    
+    if gone_count > 0 and kept_count > 0:
+        report_lines.extend([
+            "m/z 分布:",
+            f"- 消失特征: 平均值 {gone['mz_non'].mean():.2f}, 范围 {gone['mz_non'].min():.4f} - {gone['mz_non'].max():.4f}",
+            f"- 保留特征: 平均值 {kept['mz_non'].mean():.2f}, 范围 {kept['mz_non'].min():.4f} - {kept['mz_non'].max():.4f}",
+            "",
+            "保留时间分布:",
+            f"- 消失特征: 平均值 {gone['rt_non'].mean():.2f}, 范围 {gone['rt_non'].min():.2f} - {gone['rt_non'].max():.2f}",
+            f"- 保留特征: 平均值 {kept['rt_non'].mean():.2f}, 范围 {kept['rt_non'].min():.2f} - {kept['rt_non'].max():.2f}",
+            "",
+            "含 ExMrn 编号比例:",
+            f"- 消失特征: {gone_has_exmrn}/{gone_count} ({gone_has_exmrn/gone_count*100:.1f}%)",
+            f"- 保留特征: {kept_has_exmrn}/{kept_count} ({kept_has_exmrn/kept_count*100:.1f}%)",
+            "",
+            "候选名数量 (平均值):",
+            f"- 消失特征: {gone_name_count.mean():.1f}",
+            f"- 保留特征: {kept_name_count.mean():.1f}",
+            "",
+        ])
+    
+    report_lines.extend([
+        "原因推断:",
+    ])
     
     for reason in reasons:
         report_lines.append(reason)
